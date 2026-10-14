@@ -21,7 +21,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'marineguard.system@gmail.com',
-    pass: 'uwfy gxkq rfgl dbmu'
+    pass: 'cfqh bfhp lcug bgti'
   }
 });
 
