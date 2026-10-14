@@ -1,5 +1,3 @@
-server.js
-100%
 const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
@@ -8,9 +6,9 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const usersDB = {};   // Database para sa mga rehistradong user (email, name, role, password)
-const otpStore = {};  // Pansamantalang storage para sa signup OTP at details
-const resetOtpStore = {}; // Pansamantalang storage para sa password reset OTP
+const usersDB = {};   
+const otpStore = {};  
+const resetOtpStore = {}; 
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -20,7 +18,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// 1. SIGNUP: Mag-send ng OTP at i-save pansamantala kasama ang password
+// 1. SIGNUP: Send OTP
 app.post('/api/signup-otp', async (req, res) => {
   const { email, name, role, password } = req.body;
 
@@ -78,7 +76,7 @@ app.post('/api/signup-otp', async (req, res) => {
     `,
     attachments: [{
       filename: 'MARINEGUARD LOGO.jpg',
-      path: './MARINEGUARD LOGO.jpg', // Siguraduhing nasa parehong folder ito ng server.js
+      path: './MARINEGUARD LOGO.jpg',
       cid: 'marineguardlogo'
     }]
   };
@@ -93,13 +91,12 @@ app.post('/api/signup-otp', async (req, res) => {
   }
 });
 
-// 2. VERIFY SIGNUP: I-save na sa database ang user kasama ang password pagkatapos ma-verify ang OTP
+// 2. VERIFY SIGNUP
 app.post('/api/verify-signup', (req, res) => {
   const { email, otp } = req.body;
 
   if (otpStore[email] && otpStore[email].otp === otp) {
     const { name, role, password } = otpStore[email];
-    
     usersDB[email] = { name, role, password };
     delete otpStore[email];
 
@@ -110,7 +107,7 @@ app.post('/api/verify-signup', (req, res) => {
   }
 });
 
-// 3. LOGIN: I-verify ang email, password, at role
+// 3. LOGIN
 app.post('/api/login', (req, res) => {
   const { email, password, role } = req.body;
 
@@ -132,7 +129,7 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// 4. FORGOT PASSWORD: Mag-send ng OTP para sa pag-reset ng password
+// 4. FORGOT PASSWORD: OTP
 app.post('/api/forgot-password-otp', async (req, res) => {
   const { email } = req.body;
 
@@ -205,7 +202,7 @@ app.post('/api/forgot-password-otp', async (req, res) => {
   }
 });
 
-// 5. RESET PASSWORD: I-update ang password sa database matapos i-verify ang OTP
+// 5. RESET PASSWORD
 app.post('/api/reset-password', (req, res) => {
   const { email, otp, newPassword } = req.body;
 
@@ -227,7 +224,7 @@ app.post('/api/reset-password', (req, res) => {
   }
 });
 
-// 6. OIL ALERT ENDPOINT
+// 6. OIL ALERT
 app.post('/api/oil-alert', async (req, res) => {
   const { recipientEmail } = req.body;
 
@@ -252,6 +249,7 @@ app.post('/api/oil-alert', async (req, res) => {
   }
 });
 
+// CLOUD PORT LISTEN
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Backend Server is running on port ${PORT}`);
