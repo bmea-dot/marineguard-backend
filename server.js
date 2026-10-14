@@ -3,8 +3,15 @@ const nodemailer = require('nodemailer');
 const cors = require('cors');
 
 const app = express();
+
+// I-allow ang lahat ng request galing sa Firebase at localhost
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
-app.use(cors());
 
 const usersDB = {};   
 const otpStore = {};  
@@ -38,56 +45,29 @@ app.post('/api/signup-otp', async (req, res) => {
     to: email,
     subject: `Your MarineGuard Verification Code is ${otpCode}`,
     html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
-          .email-wrapper { width: 100%; background-color: #f4f6f9; padding: 40px 0; }
-          .email-content { max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); border-top: 6px solid #0d47a1; }
-          .header { padding: 30px 30px 15px 30px; text-align: center; background-color: #ffffff; }
-          .logo-img { width: 65px; height: 65px; border-radius: 50%; border: 2px solid #e3f2fd; object-fit: cover; margin-bottom: 10px; }
-          .header h1 { color: #0d47a1; font-size: 20px; margin: 0; font-weight: 700; }
-          .body-content { padding: 30px; color: #37474f; font-size: 14px; line-height: 1.5; text-align: center; }
-          .otp-box { background-color: #e3f2fd; border: 2px solid #0d47a1; border-radius: 8px; text-align: center; padding: 18px; margin: 25px 0; }
-          .otp-code { color: #0d47a1; font-size: 32px; font-weight: 800; letter-spacing: 6px; margin: 0; font-family: monospace; }
-        </style>
-      </head>
-      <body>
-        <div class="email-wrapper">
-          <div class="email-content">
-            <div class="header">
-              <img src="cid:marineguardlogo" class="logo-img" alt="MarineGuard Logo">
-              <h1>MarineGuard System</h1>
-              <p>Role: <b>${role}</b></p>
-            </div>
-            <div class="body-content">
-              <p>Hello <b>${name}</b>, use this verification code to complete your registration:</p>
-              <div class="otp-box">
-                <p class="otp-code">${otpCode}</p>
-              </div>
-              <p style="font-size: 12px; color: #78909c;">This code expires in 5 minutes.</p>
-            </div>
+      <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f6f9;">
+        <div style="max-width: 480px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 12px; border-top: 6px solid #0d47a1;">
+          <h1 style="color: #0d47a1; text-align: center; margin-bottom: 5px;">MarineGuard System</h1>
+          <p style="text-align: center; color: #555;">Role: <b>${role}</b></p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p>Hello <b>${name}</b>,</p>
+          <p>Use this verification code to complete your registration:</p>
+          <div style="background-color: #e3f2fd; border: 2px solid #0d47a1; border-radius: 8px; text-align: center; padding: 15px; margin: 20px 0;">
+            <span style="color: #0d47a1; font-size: 32px; font-weight: bold; letter-spacing: 5px; font-family: monospace;">${otpCode}</span>
           </div>
+          <p style="font-size: 12px; color: #888; text-align: center;">This code will expire in 5 minutes.</p>
         </div>
-      </body>
-      </html>
-    `,
-    attachments: [{
-      filename: 'MARINEGUARD LOGO.jpg',
-      path: './MARINEGUARD LOGO.jpg',
-      cid: 'marineguardlogo'
-    }]
+      </div>
+    `
   };
 
   try {
     await transporter.sendMail(mailOptions);
     console.log(`[Signup OTP Sent] To: ${email} | Code: ${otpCode}`);
-    res.status(200).json({ message: 'OTP sent successfully.' });
+    return res.status(200).json({ message: 'OTP sent successfully to your email.' });
   } catch (error) {
     console.error('Error sending email:', error);
-    res.status(500).json({ error: 'Failed to send verification email.' });
+    return res.status(500).json({ error: 'Failed to send email. Check Nodemailer configuration.' });
   }
 });
 
@@ -120,7 +100,7 @@ app.post('/api/login', (req, res) => {
   }
 
   if (usersDB[email].role !== role) {
-    return res.status(400).json({ error: `Incorrect role selected. This account is registered as a ${usersDB[email].role}.` });
+    return res.status(400).json({ error: `Incorrect role selected. Account registered as ${usersDB[email].role}.` });
   }
 
   return res.status(200).json({ 
@@ -129,15 +109,11 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// 4. FORGOT PASSWORD: OTP
+// 4. FORGOT PASSWORD OTP
 app.post('/api/forgot-password-otp', async (req, res) => {
   const { email } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ error: 'Email address is required.' });
-  }
-
-  if (!usersDB[email]) {
+  if (!email || !usersDB[email]) {
     return res.status(400).json({ error: 'Email address is not registered.' });
   }
 
@@ -149,56 +125,23 @@ app.post('/api/forgot-password-otp', async (req, res) => {
     to: email,
     subject: `Your MarineGuard Password Reset Code is ${otpCode}`,
     html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
-          .email-wrapper { width: 100%; background-color: #f4f6f9; padding: 40px 0; }
-          .email-content { max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); border-top: 6px solid #0d47a1; }
-          .header { padding: 30px 30px 15px 30px; text-align: center; background-color: #ffffff; }
-          .logo-img { width: 65px; height: 65px; border-radius: 50%; border: 2px solid #e3f2fd; object-fit: cover; margin-bottom: 10px; }
-          .header h1 { color: #0d47a1; font-size: 20px; margin: 0; font-weight: 700; }
-          .body-content { padding: 30px; color: #37474f; font-size: 14px; line-height: 1.5; text-align: center; }
-          .otp-box { background-color: #e3f2fd; border: 2px solid #0d47a1; border-radius: 8px; text-align: center; padding: 18px; margin: 25px 0; }
-          .otp-code { color: #0d47a1; font-size: 32px; font-weight: 800; letter-spacing: 6px; margin: 0; font-family: monospace; }
-        </style>
-      </head>
-      <body>
-        <div class="email-wrapper">
-          <div class="email-content">
-            <div class="header">
-              <img src="cid:marineguardlogo" class="logo-img" alt="MarineGuard Logo">
-              <h1>MarineGuard System</h1>
-              <p>Password Reset Request</p>
-            </div>
-            <div class="body-content">
-              <p>Use this verification code to reset your account password:</p>
-              <div class="otp-box">
-                <p class="otp-code">${otpCode}</p>
-              </div>
-              <p style="font-size: 12px; color: #78909c;">This code expires in 5 minutes.</p>
-            </div>
+      <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f6f9;">
+        <div style="max-width: 480px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 12px; border-top: 6px solid #0d47a1;">
+          <h1 style="color: #0d47a1; text-align: center;">Password Reset Request</h1>
+          <p>Use this code to reset your account password:</p>
+          <div style="background-color: #e3f2fd; border: 2px solid #0d47a1; border-radius: 8px; text-align: center; padding: 15px; margin: 20px 0;">
+            <span style="color: #0d47a1; font-size: 32px; font-weight: bold; letter-spacing: 5px; font-family: monospace;">${otpCode}</span>
           </div>
         </div>
-      </body>
-      </html>
-    `,
-    attachments: [{
-      filename: 'MARINEGUARD LOGO.jpg',
-      path: './MARINEGUARD LOGO.jpg',
-      cid: 'marineguardlogo'
-    }]
+      </div>
+    `
   };
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`[Password Reset OTP Sent] To: ${email} | Code: ${otpCode}`);
-    res.status(200).json({ message: 'Reset code sent successfully.' });
+    return res.status(200).json({ message: 'Reset code sent successfully.' });
   } catch (error) {
-    console.error('Error sending reset email:', error);
-    res.status(500).json({ error: 'Failed to send reset email.' });
+    return res.status(500).json({ error: 'Failed to send reset email.' });
   }
 });
 
@@ -206,25 +149,17 @@ app.post('/api/forgot-password-otp', async (req, res) => {
 app.post('/api/reset-password', (req, res) => {
   const { email, otp, newPassword } = req.body;
 
-  if (!email || !otp || !newPassword) {
-    return res.status(400).json({ error: 'All fields are required.' });
-  }
-
   if (resetOtpStore[email] && resetOtpStore[email].otp === otp) {
     if (usersDB[email]) {
       usersDB[email].password = newPassword;
       delete resetOtpStore[email];
-      console.log(`[Password Reset Success] For: ${email}`);
       return res.status(200).json({ message: 'Password reset successfully.' });
-    } else {
-      return res.status(400).json({ error: 'User not found.' });
     }
-  } else {
-    return res.status(400).json({ error: 'Invalid or expired reset code.' });
   }
+  return res.status(400).json({ error: 'Invalid or expired reset code.' });
 });
 
-// 6. OIL ALERT
+// 6. EMERGENCY OIL ALERT
 app.post('/api/oil-alert', async (req, res) => {
   const { recipientEmail } = req.body;
 
@@ -249,7 +184,6 @@ app.post('/api/oil-alert', async (req, res) => {
   }
 });
 
-// CLOUD PORT LISTEN
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Backend Server is running on port ${PORT}`);
